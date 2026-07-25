@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub Player Card — Ultimate Team Style</title>
+  <meta name="description" content="Generate a FIFA Ultimate Team style player card from any GitHub profile." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    /* ============ RESET & BASE ============ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 50px 20px 60px;
+      background: #06080f;
+      background-image:
+        radial-gradient(ellipse at 50% 0%, rgba(30, 58, 138, 0.25) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(91, 33, 182, 0.12) 0%, transparent 50%);
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    /* ============ HEADER ============ */
+    .page-title {
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #c9a227, #f5d75e, #c9a227);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+    }
+    .page-sub {
+      color: #64748b;
+      font-size: 14px;
+      font-weight: 400;
+      margin-bottom: 36px;
+    }
+
+    /* ============ SEARCH BAR ============ */
+    .search-row {
+      display: flex;
+      gap: 0;
+      margin-bottom: 44px;
+      position: relative;
+    }
+    .search-row input {
+      width: 280px;
+      padding: 13px 18px;
+      border: 1px solid #1e293b;
+      border-right: none;
+      border-radius: 12px 0 0 12px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .search-row input::placeholder { color: #475569; }
+    .search-row input:focus { border-color: #c9a227; }
+    .search-row button {
+      padding: 13px 26px;
+      border: 1px solid #c9a227;
+      border-radius: 0 12px 12px 0;
+      background: linear-gradient(135deg, #c9a227, #a88518);
+      color: #0f0a00;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      letter-spacing: 0.5px;
+    }
+    .search-row button:hover {
+      background: linear-gradient(135deg, #f5d75e, #c9a227);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(201, 162, 39, 0.3);
+    }
+    .search-row button:active { transform: translateY(0); }
+
+    /* ============ STATUS ============ */
+    #status-msg {
+      color: #64748b;
+      font-size: 14px;
+      min-height: 22px;
+      margin-bottom: 12px;
+      transition: opacity 0.3s;
+    }
+    #status-msg.error { color: #ef4444; }
+
+    /* ============ CARD WRAPPER ============ */
+    .card-area {
+      perspective: 800px;
+      min-height: 520px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ============ THE CARD ============ */
+    .fut-card {
+      --primary: #1a3a7a;
+      --primary-dark: #0d1f4a;
+      --accent: #c9a227;
+      --accent-light: #f5d75e;
+      --text: #ffffff;
+      --stat-text: #ffffff;
+
+      width: 340px;
+      height: 500px;
+      position: relative;
+      border-radius: 18px;
+      overflow: hidden;
+      transform-style: preserve-3d;
+      transition: transform 0.1s ease-out, box-shadow 0.3s;
+      cursor: default;
+      will-change: transform;
+
+      /* entrance animation */
+      animation: cardEntrance 0.7s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+      opacity: 0;
+    }
+    @keyframes cardEntrance {
+      0% { opacity: 0; transform: scale(0.8) rotateY(-10deg) translateY(40px); }
+      100% { opacity: 1; transform: scale(1) rotateY(0deg) translateY(0); }
+    }
+
+    /* Outer glow pulse */
+    .fut-card::before {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-light), var(--accent));
+      z-index: -1;
+      animation: glowPulse 3s ease-in-out infinite;
+    }
+    @keyframes glowPulse {
+      0%, 100% { opacity: 0.6; filter: blur(0px); }
+      50% { opacity: 1; filter: blur(2px); }
+    }
+
+    /* Card background */
+    .card-bg {
+      position: absolute;
+      inset: 0;
+      border-radius: 18px;
+      background: linear-gradient(160deg, var(--primary), var(--primary-dark));
+      z-index: 0;
+    }
+
+    /* Inner ornate border */
+    .card-inner-border {
+      position: absolute;
+      inset: 6px;
+      border-radius: 13px;
+      border: 1.5px solid var(--accent);
+      opacity: 0.5;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Decorative top arch */
+    .card-arch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 260px;
+      height: 140px;
+      border-radius: 0 0 50% 50%;
+      background: radial-gradient(ellipse at center top, rgba(201, 162, 39, 0.12) 0%, transparent 70%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Holographic shimmer overlay */
+    .card-shimmer {
+      position: absolute;
+      inset: 0;
+      border-radius: 18px;
+      z-index: 10;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .card-shimmer::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(
+        105deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.05) 40%,
+        rgba(255, 255, 255, 0.12) 50%,
+        rgba(255, 255, 255, 0.05) 60%,
+        transparent 70%
+      );
+      animation: shimmerSweep 4s ease-in-out infinite;
+    }
+    @keyframes shimmerSweep {
+      0% { transform: translateX(-80%) translateY(-20%) rotate(25deg); }
+      100% { transform: translateX(80%) translateY(20%) rotate(25deg); }
+    }
+
+    /* ============ CARD CONTENT ============ */
+    .card-content {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 22px 18px;
+    }
+
+    /* Top row: rating + tier on left, mini avatar on right */
+    .card-top {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .rating-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 60px;
+    }
+    .rating-number {
+      font-size: 56px;
+      font-weight: 900;
+      line-height: 1;
+      color: var(--accent-light);
+      text-shadow: 0 2px 12px rgba(201, 162, 39, 0.5);
+    }
+    .rating-tier {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* Top language & GitHub logo */
+    .card-top-right {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding-top: 4px;
+    }
+    .top-lang-badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(201, 162, 39, 0.12);
+      border: 1px solid rgba(201, 162, 39, 0.25);
+      border-radius: 6px;
+      padding: 3px 10px;
+      letter-spacing: 0.5px;
+    }
+    .gh-logo {
+      width: 28px;
+      height: 28px;
+      opacity: 0.35;
+    }
+
+    /* ============ PHOTO AREA ============ */
+    .photo-wrapper {
+      width: 160px;
+      height: 160px;
+      position: relative;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+
+    /* decorative crystal ring behind photo */
+    .photo-ring {
+      position: absolute;
+      inset: -12px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      opacity: 0.25;
+      animation: ringPulse 3s ease-in-out infinite alternate;
+    }
+    .photo-ring:nth-child(2) {
+      inset: -20px;
+      opacity: 0.12;
+      animation-delay: 0.5s;
+    }
+    @keyframes ringPulse {
+      0% { transform: scale(1); opacity: 0.15; }
+      100% { transform: scale(1.04); opacity: 0.35; }
+    }
+
+    .photo-container {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid var(--accent);
+      position: relative;
+      background: rgba(0,0,0,0.3);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4), inset 0 0 30px rgba(201, 162, 39, 0.08);
+    }
+    .photo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Upload overlay */
+    .photo-upload-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s;
+      cursor: pointer;
+      z-index: 3;
+    }
+    .photo-container:hover .photo-upload-overlay {
+      opacity: 1;
+    }
+    .photo-upload-overlay svg {
+      width: 28px;
+      height: 28px;
+      fill: #ffffff;
+      margin-bottom: 4px;
+    }
+    .photo-upload-overlay span {
+      font-size: 10px;
+      color: #ffffff;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .photo-upload-overlay input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      border-radius: 50%;
+    }
+
+    /* ============ NAME ============ */
+    .player-name {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text);
+      text-shadow: 0 1px 8px rgba(0,0,0,0.4);
+      margin-bottom: 2px;
+      text-align: center;
+      max-width: 290px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .player-username {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--accent);
+      opacity: 0.7;
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Mini info line */
+    .player-info-line {
+      font-size: 10px;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 16px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ============ DIVIDER ============ */
+    .card-divider {
+      width: 85%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0.4;
+      margin-bottom: 16px;
+    }
+
+    /* ============ STATS GRID ============ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 40px;
+      width: 100%;
+      max-width: 260px;
+    }
+    .stat-item {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .stat-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--stat-text);
+      min-width: 38px;
+      text-align: right;
+    }
+    .stat-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+
+    /* ============ CARD FOOTER ============ */
+    .card-footer {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-footer-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.4;
+    }
+    .card-footer-text {
+      font-size: 8px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.2);
+      font-weight: 600;
+    }
+
+    /* ============ TIER COLOR SCHEMES ============ */
+    .fut-card.tier-legendary {
+      --primary: #4a3000;
+      --primary-dark: #2a1a00;
+      --accent: #ffd700;
+      --accent-light: #ffe866;
+    }
+    .fut-card.tier-elite {
+      --primary: #0d1f5c;
+      --primary-dark: #070f30;
+      --accent: #c9a227;
+      --accent-light: #f5d75e;
+    }
+    .fut-card.tier-skilled {
+      --primary: #3b1055;
+      --primary-dark: #1f0830;
+      --accent: #d07be8;
+      --accent-light: #e8a8f8;
+    }
+    .fut-card.tier-rising {
+      --primary: #073a3a;
+      --primary-dark: #021e1e;
+      --accent: #2dd4bf;
+      --accent-light: #5eead4;
+    }
+    .fut-card.tier-rookie {
+      --primary: #1e293b;
+      --primary-dark: #0f172a;
+      --accent: #94a3b8;
+      --accent-light: #cbd5e1;
+    }
+
+    /* ============ LOADING SPINNER ============ */
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(201, 162, 39, 0.15);
+      border-top-color: #c9a227;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ============ ACTIONS ============ */
+    .actions-area {
+      margin-top: 24px;
+      display: none;
+    }
+    .download-btn {
+      padding: 12px 24px;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .download-btn:hover {
+      border-color: #c9a227;
+      color: #c9a227;
+      background: rgba(201, 162, 39, 0.05);
+    }
+    .download-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* ============ RESPONSIVE ============ */
+    @media (max-width: 420px) {
+      .fut-card { width: 300px; height: 440px; }
+      .rating-number { font-size: 46px; }
+      .player-name { font-size: 18px; }
+      .stat-value { font-size: 22px; }
+      .photo-wrapper { width: 130px; height: 130px; }
+      .search-row input { width: 200px; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1 class="page-title" id="page-title">GitHub Player Card</h1>
+  <p class="page-sub" id="page-sub">Enter a GitHub username to generate your ultimate team card</p>
+
+  <div class="search-row">
+    <input id="username-input" type="text" placeholder="e.g. torvalds" autocomplete="off" />
+    <button id="generate-btn" onclick="generateCard()">Generate</button>
+  </div>
+
+  <div id="status-msg"></div>
+
+  <div class="card-area" id="card-area">
+    <!-- Card renders here -->
+  </div>
+
+  <div class="actions-area" id="actions-area">
+    <button class="download-btn" id="download-btn" onclick="downloadPNG()">Download PNG</button>
+  </div>
+
+  <script>
+    const API_BASE = "http://localhost:8000";
+    let customPhotoDataUrl = null;
+
+    // ============ GENERATE CARD ============
+    async function generateCard() {
+      const username = document.getElementById("username-input").value.trim();
+      const statusEl = document.getElementById("status-msg");
+      const cardArea = document.getElementById("card-area");
+
+      if (!username) {
+        statusEl.textContent = "Please enter a username";
+        statusEl.className = "error";
+        return;
+      }
+
+      statusEl.textContent = "";
+      statusEl.className = "";
+      cardArea.innerHTML = '<div class="spinner"></div>';
+      document.getElementById("actions-area").style.display = "none";
+      customPhotoDataUrl = null;
+
+      try {
+        const resp = await fetch(`${API_BASE}/api/card/${encodeURIComponent(username)}`);
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          statusEl.textContent = err.detail || `Error: ${resp.statusText}`;
+          statusEl.className = "error";
+          cardArea.innerHTML = "";
+          return;
+        }
+        const data = await resp.json();
+        renderCard(data);
+      } catch (e) {
+        statusEl.textContent = "Network error — is the backend running?";
+        statusEl.className = "error";
+        cardArea.innerHTML = "";
+      }
+    }
+
+    // ============ RENDER CARD ============
+    function renderCard(data) {
+      const cardArea = document.getElementById("card-area");
+      const tierClass = `tier-${data.tier.toLowerCase()}`;
+
+      const topLang = data.top_languages && data.top_languages.length > 0
+        ? data.top_languages[0]
+        : "Code";
+
+      const avatarUrl = data.avatar_url || "";
+      const displayName = (data.name || data.username).toUpperCase();
+      const truncName = displayName.length > 16 ? displayName.slice(0, 16) : displayName;
+
+      const stats = [
+        { value: data.attributes.consistency, label: "CON" },
+        { value: data.attributes.depth,       label: "DEP" },
+        { value: data.attributes.range,       label: "RNG" },
+        { value: data.attributes.impact,      label: "IMP" },
+        { value: data.attributes.collaboration, label: "COL" },
+        { value: data.overall,                label: "OVR" },
+      ];
+
+      const statsHtml = stats.map((s, i) => `
+        <div class="stat-item">
+          <span class="stat-value" data-target="${s.value}" data-index="${i}">0</span>
+          <span class="stat-label">${s.label}</span>
+        </div>
+      `).join("");
+
+      const infoLine = `${data.public_repos} repos · ${data.followers} followers · ${data.total_stars}★ · ${data.account_age_years} yrs`;
+
+      cardArea.innerHTML = `
+        <div class="fut-card ${tierClass}" id="fut-card">
+          <!-- Gold border glow -->
+          <div class="card-bg"></div>
+          <div class="card-inner-border"></div>
+          <div class="card-arch"></div>
+          <div class="card-shimmer"></div>
+
+          <div class="card-content">
+            <div class="card-top">
+              <div class="rating-block">
+                <span class="rating-number" id="rating-number" data-target="${data.overall}">0</span>
+                <span class="rating-tier">${data.tier}</span>
+              </div>
+              <div class="card-top-right">
+                <span class="top-lang-badge">${topLang}</span>
+                <svg class="gh-logo" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="photo-wrapper">
+              <div class="photo-ring"></div>
+              <div class="photo-ring"></div>
+              <div class="photo-container" id="photo-container">
+                <img id="player-photo" src="${avatarUrl}" alt="${data.name}" crossorigin="anonymous" />
+                <div class="photo-upload-overlay">
+                  <svg viewBox="0 0 24 24"><path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/></svg>
+                  <span>Add Photo</span>
+                  <input type="file" accept="image/*" onchange="handlePhotoUpload(event)" title="Upload custom photo" />
+                </div>
+              </div>
+            </div>
+
+            <div class="player-name">${truncName}</div>
+            <div class="player-username">@${data.username}</div>
+            <div class="player-info-line">${infoLine}</div>
+
+            <div class="card-divider"></div>
+
+            <div class="stats-grid">
+              ${statsHtml}
+            </div>
+
+            <div class="card-footer">
+              <span class="card-footer-dot"></span>
+              <span class="card-footer-text">GitHub Player Card</span>
+              <span class="card-footer-dot"></span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Start animations
+      animateStatCountUp();
+      animateRatingCountUp();
+      setupHoverTilt();
+
+      document.getElementById("actions-area").style.display = "block";
+      window.currentCardUsername = data.username;
+    }
+
+    // ============ STAT COUNT-UP ANIMATION ============
+    function animateStatCountUp() {
+      const statEls = document.querySelectorAll(".stat-value[data-target]");
+      statEls.forEach((el) => {
+        const target = parseInt(el.dataset.target, 10);
+        const delay = parseInt(el.dataset.index || "0", 10) * 80;
+        const duration = 800;
+
+        setTimeout(() => {
+          const start = performance.now();
+          function tick(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            // ease-out cubic
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(target * eased);
+            if (progress < 1) requestAnimationFrame(tick);
+          }
+          requestAnimationFrame(tick);
+        }, 300 + delay);
+      });
+    }
+
+    // ============ RATING COUNT-UP ============
+    function animateRatingCountUp() {
+      const el = document.getElementById("rating-number");
+      if (!el) return;
+      const target = parseInt(el.dataset.target, 10);
+      const duration = 1000;
+      const startTime = performance.now();
+
+      function tick(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(target * eased);
+        if (progress < 1) requestAnimationFrame(tick);
+      }
+      setTimeout(() => requestAnimationFrame(tick), 200);
+    }
+
+    // ============ HOVER 3D TILT ============
+    function setupHoverTilt() {
+      const card = document.getElementById("fut-card");
+      if (!card) return;
+
+      card.addEventListener("mousemove", (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const rotateY = ((x - centerX) / centerX) * 12;
+        const rotateX = ((centerY - y) / centerY) * 12;
+        card.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        card.style.boxShadow = `${-rotateY * 2}px ${rotateX * 2}px 40px rgba(0, 0, 0, 0.35)`;
+      });
+
+      card.addEventListener("mouseleave", () => {
+        card.style.transform = "rotateX(0) rotateY(0)";
+        card.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.3)";
+      });
+    }
+
+    // ============ PHOTO UPLOAD ============
+    function handlePhotoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        customPhotoDataUrl = e.target.result;
+        const img = document.getElementById("player-photo");
+        if (img) img.src = customPhotoDataUrl;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ============ DOWNLOAD PNG ============
+    async function downloadPNG() {
+      const username = window.currentCardUsername;
+      if (!username) return;
+      const btn = document.getElementById("download-btn");
+      const originalText = btn.textContent;
+      btn.textContent = "Generating...";
+      btn.disabled = true;
+
+      try {
+        const resp = await fetch(`${API_BASE}/api/card/${encodeURIComponent(username)}/svg`);
+        if (!resp.ok) throw new Error("Failed to fetch SVG");
+        let svgText = await resp.text();
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 320;
+        canvas.height = 460;
+        const ctx = canvas.getContext("2d");
+        
+        const img = new Image();
+        const svgBlob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(svgBlob);
+        
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+          
+          const pngUrl = canvas.toDataURL("image/png");
+          const a = document.createElement("a");
+          a.download = `${username}-github-card.png`;
+          a.href = pngUrl;
+          a.click();
+          
+          btn.textContent = originalText;
+          btn.disabled = false;
+        };
+        img.onerror = () => {
+          console.error("Image load error");
+          btn.textContent = "Error";
+          btn.disabled = false;
+        };
+        img.src = url;
+      } catch (e) {
+        console.error(e);
+        btn.textContent = "Error";
+        btn.disabled = false;
+      }
+    }
+
+    // ============ ENTER KEY ============
+    document.getElementById("username-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") generateCard();
+    });
+  </script>
+</body>
+</html>
