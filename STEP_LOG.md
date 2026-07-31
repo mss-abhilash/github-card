@@ -111,13 +111,16 @@ GraphQL contribution-calendar call works against live data.**
 **Verified by:** Tested frontend logic; the button appears and successfully triggers the canvas rendering code path.
 
 ## Step 8 — Deploy
-**Status:** NEXT
-**Task:** Deploy backend to Render/Railway (set `GITHUB_TOKEN` in their env var dashboard, never commit it to git). Deploy frontend to Vercel/Netlify as a static site. Update `API_BASE` in `frontend/index.html` to point at the deployed backend URL.
+**Status:** DONE
+**What was done:** Deployed the full-stack application (both FastAPI backend and HTML frontend) to a single Render Web Service. Configured `GITHUB_TOKEN` environment variable. Updated `API_BASE` in `frontend/index.html` to point to the live Render URL.
+**Verified by:** The application is live at the Render URL and successfully rendering data.
 
-## Step 9 — Chess.com card type (not started)
-**Task (for later, do not start yet):** Add a second data source
-(`chess_client.py`) following the same pattern as `github_client.py`, a
-new `compute_*` set of attributes in a new `chess_stats.py`, and reuse
-the existing `card_svg.py` renderer (it should already be generic enough
-to accept any card_data dict with the same shape — verify this assumption
-before writing new code).
+## Step 9 — BGMI Screenshot-to-Card (AI Vision)
+**Status:** NEXT
+**Task:** Pivot the app to support BGMI by uploading a screenshot of player stats. 
+1. Get a Gemini API key and add it to Render env vars.
+2. Update `frontend/index.html` to include an image upload input.
+3. Create an endpoint in `backend/main.py` to receive the image.
+4. Pass the image to Gemini's Vision model to extract K/D, Wins, and Matches Played.
+5. Create a `bgmi_stats.py` to convert those stats to a 0-99 rating.
+6. Refactor `card_svg.py` so it is truly generic and can render the BGMI labels instead of hardcoding GitHub text.
