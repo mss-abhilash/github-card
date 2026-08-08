@@ -7,7 +7,7 @@
   <meta name="description" content="Generate a FIFA Ultimate Team style player card from any GitHub or Chess.com profile." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
     /* ============ RESET & BASE ============ */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -15,136 +15,249 @@
     body {
       font-family: 'Outfit', sans-serif;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      padding: 50px 20px 60px;
       background: #06080f;
-      background-image:
-        radial-gradient(ellipse at 50% 0%, rgba(30, 58, 138, 0.25) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 80%, rgba(91, 33, 182, 0.12) 0%, transparent 50%);
       color: #e2e8f0;
       overflow-x: hidden;
     }
 
-    /* ============ HEADER ============ */
-    .page-title {
-      font-size: 32px;
-      font-weight: 900;
-      letter-spacing: -0.5px;
-      background: linear-gradient(135deg, #c9a227, #f5d75e, #c9a227);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 6px;
-    }
-    .page-sub {
-      color: #64748b;
-      font-size: 14px;
-      font-weight: 400;
-      margin-bottom: 28px;
+    /* ============ STARFIELD CANVAS ============ */
+    #starfield {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
     }
 
-    /* ============ CARD TYPE TOGGLE ============ */
-    .type-toggle {
-      display: flex;
-      gap: 0;
-      margin-bottom: 24px;
-      background: #0f172a;
-      border-radius: 14px;
-      border: 1px solid #1e293b;
-      padding: 4px;
-      position: relative;
+    /* Gradient overlay on top of starfield */
+    .bg-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(99, 60, 200, 0.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 85%, rgba(30, 58, 138, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 15% 70%, rgba(168, 85, 247, 0.08) 0%, transparent 45%);
     }
-    .type-toggle-btn {
+
+    /* ============ NAVBAR ============ */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 40px;
+      height: 64px;
+      background: rgba(6, 8, 15, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      max-width: 800px;
+    }
+
+    .nav-link {
       position: relative;
-      z-index: 1;
-      padding: 10px 28px;
-      border: none;
-      border-radius: 11px;
-      background: transparent;
-      color: #64748b;
-      font-family: 'Outfit', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: color 0.3s;
       display: flex;
       align-items: center;
       gap: 8px;
-      letter-spacing: 0.3px;
+      padding: 10px 24px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.5);
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .type-toggle-btn:hover {
-      color: #94a3b8;
-    }
-    .type-toggle-btn.active {
-      color: #0f0a00;
-    }
-    .type-toggle-btn svg {
+    .nav-link svg {
       width: 18px;
       height: 18px;
       flex-shrink: 0;
+      opacity: 0.7;
+      transition: opacity 0.3s;
+    }
+    .nav-link:hover {
+      color: rgba(255, 255, 255, 0.85);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .nav-link:hover svg { opacity: 1; }
+
+    .nav-link.active {
+      color: #ffffff;
+      background: rgba(201, 162, 39, 0.12);
+      box-shadow: 0 0 20px rgba(201, 162, 39, 0.08);
+    }
+    .nav-link.active svg { opacity: 1; }
+
+    .nav-link.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 20%;
+      right: 20%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #c9a227, transparent);
+      border-radius: 2px;
     }
 
-    /* Sliding pill indicator */
-    .toggle-pill {
-      position: absolute;
-      top: 4px;
-      left: 4px;
-      height: calc(100% - 8px);
-      border-radius: 11px;
-      background: linear-gradient(135deg, #c9a227, #a88518);
-      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 0;
-      box-shadow: 0 2px 12px rgba(201, 162, 39, 0.3);
+    .nav-divider {
+      width: 1px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.08);
+      margin: 0 4px;
+    }
+
+    /* Coming soon badge */
+    .nav-link .coming-soon {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #c9a227;
+      background: rgba(201, 162, 39, 0.15);
+      border: 1px solid rgba(201, 162, 39, 0.2);
+      border-radius: 4px;
+      padding: 2px 5px;
+      line-height: 1;
+    }
+
+    /* ============ MAIN CONTENT ============ */
+    .main {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px 60px;
+    }
+
+    /* ============ HERO SECTION ============ */
+    .hero {
+      text-align: center;
+      margin-bottom: 48px;
+      animation: heroFadeIn 1s ease-out forwards;
+    }
+    @keyframes heroFadeIn {
+      0% { opacity: 0; transform: translateY(30px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      background: rgba(201, 162, 39, 0.08);
+      border: 1px solid rgba(201, 162, 39, 0.15);
+      font-size: 12px;
+      font-weight: 600;
+      color: #c9a227;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .hero-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #c9a227;
+      animation: pulseDot 2s ease-in-out infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.3); }
+    }
+
+    .hero-title {
+      font-size: 64px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      line-height: 1.05;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.7) 50%, #c9a227 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-subtitle {
+      font-size: 16px;
+      font-weight: 300;
+      color: rgba(255, 255, 255, 0.4);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 48px;
     }
 
     /* ============ SEARCH BAR ============ */
-    .search-row {
+    .search-container {
       display: flex;
       gap: 0;
-      margin-bottom: 44px;
-      position: relative;
+      margin-bottom: 16px;
+      animation: heroFadeIn 1s ease-out 0.2s both;
     }
-    .search-row input {
-      width: 280px;
-      padding: 13px 18px;
-      border: 1px solid #1e293b;
+    .search-container input {
+      width: 320px;
+      padding: 16px 22px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-right: none;
-      border-radius: 12px 0 0 12px;
-      background: #0f172a;
+      border-radius: 14px 0 0 14px;
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(10px);
       color: #e2e8f0;
       font-family: 'Outfit', sans-serif;
       font-size: 15px;
+      font-weight: 400;
       outline: none;
-      transition: border-color 0.3s;
+      transition: all 0.3s;
     }
-    .search-row input::placeholder { color: #475569; }
-    .search-row input:focus { border-color: #c9a227; }
-    .search-row button {
-      padding: 13px 26px;
-      border: 1px solid #c9a227;
-      border-radius: 0 12px 12px 0;
-      background: linear-gradient(135deg, #c9a227, #a88518);
-      color: #0f0a00;
+    .search-container input::placeholder { color: rgba(255, 255, 255, 0.2); }
+    .search-container input:focus {
+      border-color: rgba(201, 162, 39, 0.4);
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .search-container button {
+      padding: 16px 32px;
+      border: 1px solid rgba(201, 162, 39, 0.5);
+      border-radius: 0 14px 14px 0;
+      background: linear-gradient(135deg, rgba(201, 162, 39, 0.2), rgba(201, 162, 39, 0.1));
+      backdrop-filter: blur(10px);
+      color: #c9a227;
       font-family: 'Outfit', sans-serif;
       font-size: 15px;
       font-weight: 700;
       cursor: pointer;
       transition: all 0.3s;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
     }
-    .search-row button:hover {
-      background: linear-gradient(135deg, #f5d75e, #c9a227);
+    .search-container button:hover {
+      background: linear-gradient(135deg, rgba(201, 162, 39, 0.35), rgba(201, 162, 39, 0.2));
+      box-shadow: 0 4px 30px rgba(201, 162, 39, 0.15);
       transform: translateY(-1px);
-      box-shadow: 0 4px 20px rgba(201, 162, 39, 0.3);
     }
-    .search-row button:active { transform: translateY(0); }
+    .search-container button:active { transform: translateY(0); }
 
     /* ============ STATUS ============ */
     #status-msg {
-      color: #64748b;
+      color: rgba(255, 255, 255, 0.4);
       font-size: 14px;
       min-height: 22px;
       margin-bottom: 12px;
@@ -155,7 +268,7 @@
     /* ============ CARD WRAPPER ============ */
     .card-area {
       perspective: 800px;
-      min-height: 520px;
+      min-height: 60px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -180,7 +293,6 @@
       cursor: default;
       will-change: transform;
 
-      /* entrance animation */
       animation: cardEntrance 0.7s cubic-bezier(0.23, 1, 0.32, 1) forwards;
       opacity: 0;
     }
@@ -189,7 +301,6 @@
       100% { opacity: 1; transform: scale(1) rotateY(0deg) translateY(0); }
     }
 
-    /* Outer glow pulse */
     .fut-card::before {
       content: '';
       position: absolute;
@@ -204,7 +315,6 @@
       50% { opacity: 1; filter: blur(2px); }
     }
 
-    /* Card background */
     .card-bg {
       position: absolute;
       inset: 0;
@@ -213,7 +323,6 @@
       z-index: 0;
     }
 
-    /* Inner ornate border */
     .card-inner-border {
       position: absolute;
       inset: 6px;
@@ -224,7 +333,6 @@
       pointer-events: none;
     }
 
-    /* Decorative top arch */
     .card-arch {
       position: absolute;
       top: 0;
@@ -238,7 +346,6 @@
       pointer-events: none;
     }
 
-    /* Holographic shimmer overlay */
     .card-shimmer {
       position: absolute;
       inset: 0;
@@ -281,7 +388,6 @@
       padding: 20px 22px 18px;
     }
 
-    /* Top row: rating + tier on left, mini avatar on right */
     .card-top {
       width: 100%;
       display: flex;
@@ -312,7 +418,6 @@
       margin-top: 2px;
     }
 
-    /* Top language & logo */
     .card-top-right {
       display: flex;
       flex-direction: column;
@@ -335,8 +440,6 @@
       height: 28px;
       opacity: 0.35;
     }
-
-    /* Chess title badge (GM, IM, FM, etc.) */
     .chess-title-badge {
       font-size: 18px;
       font-weight: 900;
@@ -354,7 +457,6 @@
       flex-shrink: 0;
     }
 
-    /* decorative crystal ring behind photo */
     .photo-ring {
       position: absolute;
       inset: -12px;
@@ -390,7 +492,6 @@
       display: block;
     }
 
-    /* Upload overlay */
     .photo-upload-overlay {
       position: absolute;
       inset: 0;
@@ -405,9 +506,7 @@
       cursor: pointer;
       z-index: 3;
     }
-    .photo-container:hover .photo-upload-overlay {
-      opacity: 1;
-    }
+    .photo-container:hover .photo-upload-overlay { opacity: 1; }
     .photo-upload-overlay svg {
       width: 28px;
       height: 28px;
@@ -451,8 +550,6 @@
       margin-bottom: 4px;
       letter-spacing: 0.5px;
     }
-
-    /* Mini info line */
     .player-info-line {
       font-size: 10px;
       color: rgba(255,255,255,0.4);
@@ -460,7 +557,6 @@
       letter-spacing: 0.5px;
     }
 
-    /* ============ DIVIDER ============ */
     .card-divider {
       width: 85%;
       height: 1px;
@@ -496,7 +592,6 @@
       letter-spacing: 1px;
     }
 
-    /* ============ CARD FOOTER ============ */
     .card-footer {
       position: absolute;
       bottom: 14px;
@@ -568,110 +663,231 @@
     .actions-area {
       margin-top: 24px;
       display: none;
+      animation: heroFadeIn 0.5s ease-out forwards;
     }
     .download-btn {
-      padding: 12px 24px;
-      border: 1px solid #1e293b;
+      padding: 12px 28px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 12px;
-      background: #0f172a;
-      color: #e2e8f0;
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(10px);
+      color: rgba(255, 255, 255, 0.6);
       font-family: 'Outfit', sans-serif;
-      font-size: 15px;
-      font-weight: 700;
+      font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
       transition: all 0.3s;
+      letter-spacing: 0.5px;
     }
     .download-btn:hover {
-      border-color: #c9a227;
+      border-color: rgba(201, 162, 39, 0.3);
       color: #c9a227;
-      background: rgba(201, 162, 39, 0.05);
+      background: rgba(201, 162, 39, 0.06);
     }
     .download-btn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
     }
 
+    /* ============ FOOTER ============ */
+    .site-footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 40px 20px 30px;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .site-footer p {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.15);
+      letter-spacing: 1px;
+    }
+
     /* ============ RESPONSIVE ============ */
+    @media (max-width: 640px) {
+      .hero-title { font-size: 38px; }
+      .hero-subtitle { font-size: 12px; letter-spacing: 2px; }
+      .nav-inner { gap: 4px; }
+      .nav-link { padding: 8px 14px; font-size: 11px; gap: 5px; }
+      .nav-link svg { width: 15px; height: 15px; }
+      .nav-divider { margin: 0 2px; }
+      .coming-soon { display: none; }
+    }
     @media (max-width: 420px) {
       .fut-card { width: 300px; height: 440px; }
       .rating-number { font-size: 46px; }
       .player-name { font-size: 18px; }
       .stat-value { font-size: 22px; }
       .photo-wrapper { width: 130px; height: 130px; }
-      .search-row input { width: 200px; }
-      .type-toggle-btn { padding: 8px 18px; font-size: 13px; }
+      .search-container input { width: 200px; }
+      .hero-title { font-size: 30px; }
     }
   </style>
 </head>
 <body>
 
-  <h1 class="page-title" id="page-title">Player Card</h1>
-  <p class="page-sub" id="page-sub">Generate your ultimate team card from GitHub or Chess.com</p>
+  <!-- Starfield Canvas -->
+  <canvas id="starfield"></canvas>
+  <div class="bg-overlay"></div>
 
-  <!-- Card Type Toggle -->
-  <div class="type-toggle" id="type-toggle">
-    <div class="toggle-pill" id="toggle-pill"></div>
-    <button class="type-toggle-btn active" id="toggle-github" onclick="switchCardType('github')" data-type="github">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-      GitHub
-    </button>
-    <button class="type-toggle-btn" id="toggle-chess" onclick="switchCardType('chess')" data-type="chess">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 22H5v-2h14v2M17.16 8.26A4.96 4.96 0 0018 5.5C18 3.02 15.98 1 13.5 1S9 3.02 9 5.5c0 1.05.33 2.02.88 2.82L6 13h4v5h7v-5h4l-3.84-4.74zM13.5 3a2.5 2.5 0 010 5 2.5 2.5 0 010-5z"/></svg>
-      Chess.com
-    </button>
-  </div>
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <button class="nav-link active" id="nav-github" onclick="switchCardType('github')" data-type="github">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </button>
 
-  <div class="search-row">
-    <input id="username-input" type="text" placeholder="e.g. torvalds" autocomplete="off" />
-    <button id="generate-btn" onclick="generateCard()">Generate</button>
-  </div>
+      <div class="nav-divider"></div>
 
-  <div id="status-msg"></div>
+      <button class="nav-link" id="nav-chess" onclick="switchCardType('chess')" data-type="chess">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 22H5v-2h14v2M17.16 8.26A4.96 4.96 0 0018 5.5C18 3.02 15.98 1 13.5 1S9 3.02 9 5.5c0 1.05.33 2.02.88 2.82L6 13h4v5h7v-5h4l-3.84-4.74zM13.5 3a2.5 2.5 0 010 5 2.5 2.5 0 010-5z"/></svg>
+        Chess.com
+      </button>
 
-  <div class="card-area" id="card-area">
-    <!-- Card renders here -->
-  </div>
+      <div class="nav-divider"></div>
 
-  <div class="actions-area" id="actions-area">
-    <button class="download-btn" id="download-btn" onclick="downloadPNG()">Download PNG</button>
-  </div>
+      <button class="nav-link" id="nav-codeforces" onclick="switchCardType('codeforces')" data-type="codeforces" disabled>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.5 7.5A1.5 1.5 0 016 9v10.5a1.5 1.5 0 01-3 0V9a1.5 1.5 0 011.5-1.5zm7.5-3A1.5 1.5 0 0113.5 6v13.5a1.5 1.5 0 01-3 0V6A1.5 1.5 0 0112 4.5zm7.5 6a1.5 1.5 0 011.5 1.5v7.5a1.5 1.5 0 01-3 0V12a1.5 1.5 0 011.5-1.5z"/></svg>
+        Codeforces
+        <span class="coming-soon">SOON</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main">
+    <!-- Hero -->
+    <div class="hero" id="hero-section">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        FIFA Ultimate Team Style Cards
+      </div>
+      <h1 class="hero-title" id="page-title">PLAYER CARD</h1>
+      <p class="hero-subtitle" id="page-sub">Generate your ultimate team card from any profile</p>
+    </div>
+
+    <!-- Search -->
+    <div class="search-container">
+      <input id="username-input" type="text" placeholder="e.g. torvalds" autocomplete="off" />
+      <button id="generate-btn" onclick="generateCard()">Generate</button>
+    </div>
+
+    <div id="status-msg"></div>
+
+    <div class="card-area" id="card-area">
+      <!-- Card renders here -->
+    </div>
+
+    <div class="actions-area" id="actions-area">
+      <button class="download-btn" id="download-btn" onclick="downloadPNG()">↓ Download PNG</button>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <p>PLAYER CARD · NOT AN OFFICIAL PRODUCT · OPEN SOURCE</p>
+  </footer>
 
   <script>
+    // ============ STARFIELD ============
+    (function initStarfield() {
+      const canvas = document.getElementById('starfield');
+      const ctx = canvas.getContext('2d');
+      let stars = [];
+      const STAR_COUNT = 200;
+      let w, h;
+
+      function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      }
+
+      function createStars() {
+        stars = [];
+        for (let i = 0; i < STAR_COUNT; i++) {
+          stars.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            radius: Math.random() * 1.5 + 0.3,
+            alpha: Math.random() * 0.6 + 0.1,
+            dx: (Math.random() - 0.5) * 0.15,
+            dy: (Math.random() - 0.5) * 0.15,
+            pulse: Math.random() * Math.PI * 2,
+            pulseSpeed: Math.random() * 0.01 + 0.005,
+          });
+        }
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+        for (const s of stars) {
+          s.x += s.dx;
+          s.y += s.dy;
+          s.pulse += s.pulseSpeed;
+
+          // Wrap around
+          if (s.x < 0) s.x = w;
+          if (s.x > w) s.x = 0;
+          if (s.y < 0) s.y = h;
+          if (s.y > h) s.y = 0;
+
+          const alpha = s.alpha * (0.6 + 0.4 * Math.sin(s.pulse));
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+          ctx.fill();
+        }
+
+        // Draw a few connecting lines between nearby stars
+        for (let i = 0; i < stars.length; i++) {
+          for (let j = i + 1; j < stars.length; j++) {
+            const dx = stars[i].x - stars[j].x;
+            const dy = stars[i].y - stars[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 100) {
+              ctx.beginPath();
+              ctx.moveTo(stars[i].x, stars[i].y);
+              ctx.lineTo(stars[j].x, stars[j].y);
+              ctx.strokeStyle = `rgba(201, 162, 39, ${0.06 * (1 - dist / 100)})`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+        }
+
+        requestAnimationFrame(draw);
+      }
+
+      resize();
+      createStars();
+      draw();
+      window.addEventListener('resize', () => { resize(); createStars(); });
+    })();
+
+    // ============ APP STATE ============
     // Use relative paths — works both locally and when deployed since
     // FastAPI serves the frontend from the same origin as the API
     const API_BASE = "";
     let customPhotoDataUrl = null;
     let currentCardType = "github";
 
-    // ============ CARD TYPE TOGGLE ============
+    // ============ CARD TYPE SWITCH ============
     function switchCardType(type) {
+      if (type === 'codeforces') return; // not yet implemented
       currentCardType = type;
-      const githubBtn = document.getElementById("toggle-github");
-      const chessBtn = document.getElementById("toggle-chess");
-      const pill = document.getElementById("toggle-pill");
       const input = document.getElementById("username-input");
 
-      githubBtn.classList.toggle("active", type === "github");
-      chessBtn.classList.toggle("active", type === "chess");
+      document.querySelectorAll('.nav-link').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === type);
+      });
 
-      // Animate the pill
       if (type === "github") {
-        pill.style.left = "4px";
-        pill.style.width = githubBtn.offsetWidth + "px";
         input.placeholder = "e.g. torvalds";
       } else {
-        pill.style.left = githubBtn.offsetWidth + 4 + "px";
-        pill.style.width = chessBtn.offsetWidth + "px";
         input.placeholder = "e.g. hikaru";
       }
     }
-
-    // Initialize pill width on load
-    window.addEventListener("DOMContentLoaded", () => {
-      const githubBtn = document.getElementById("toggle-github");
-      const pill = document.getElementById("toggle-pill");
-      pill.style.width = githubBtn.offsetWidth + "px";
-    });
 
     // ============ STAT CONFIG PER CARD TYPE ============
     const STAT_CONFIG = {
@@ -714,7 +930,9 @@
       document.getElementById("actions-area").style.display = "none";
       customPhotoDataUrl = null;
 
-      // Pick endpoint based on card type
+      // Collapse hero on generate
+      document.getElementById("hero-section").style.marginBottom = "28px";
+
       const endpoint = currentCardType === "chess"
         ? `${API_BASE}/api/chess/${encodeURIComponent(username)}`
         : `${API_BASE}/api/card/${encodeURIComponent(username)}`;
@@ -750,13 +968,11 @@
       const displayName = (data.name || data.username).toUpperCase();
       const truncName = displayName.length > 16 ? displayName.slice(0, 16) : displayName;
 
-      // Build stats from config
       const statConfig = STAT_CONFIG[cardType] || STAT_CONFIG.github;
       const stats = statConfig.map(s => ({
         value: data.attributes[s.key] || 0,
         label: s.label,
       }));
-      // Add OVR as the 6th stat
       stats.push({ value: data.overall, label: "OVR" });
 
       const statsHtml = stats.map((s, i) => `
@@ -766,25 +982,21 @@
         </div>
       `).join("");
 
-      // Info line — use generalized field or build from legacy fields
       const infoLine = data.info_line
         || `${data.public_repos} repos · ${data.followers} followers · ${data.total_stars}★ · ${data.account_age_years} yrs`;
 
       const footerText = CARD_TYPE_FOOTER[cardType] || "Player Card";
 
-      // Logo — GitHub octocat or Chess piece
       const logoSvg = cardType === "chess"
         ? `<svg class="card-logo" viewBox="0 0 24 24" fill="currentColor"><path d="M19 22H5v-2h14v2M17.16 8.26A4.96 4.96 0 0018 5.5C18 3.02 15.98 1 13.5 1S9 3.02 9 5.5c0 1.05.33 2.02.88 2.82L6 13h4v5h7v-5h4l-3.84-4.74zM13.5 3a2.5 2.5 0 010 5 2.5 2.5 0 010-5z"/></svg>`
         : `<svg class="card-logo" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>`;
 
-      // Chess title badge (GM, IM, etc.)
       const chessTitleHtml = cardType === "chess" && data.chess_title
         ? `<span class="chess-title-badge">${data.chess_title}</span>`
         : "";
 
       cardArea.innerHTML = `
         <div class="fut-card ${tierClass}" id="fut-card">
-          <!-- Gold border glow -->
           <div class="card-bg"></div>
           <div class="card-inner-border"></div>
           <div class="card-arch"></div>
@@ -835,7 +1047,6 @@
         </div>
       `;
 
-      // Start animations
       animateStatCountUp();
       animateRatingCountUp();
       setupHoverTilt();
@@ -858,7 +1069,6 @@
           function tick(now) {
             const elapsed = now - start;
             const progress = Math.min(elapsed / duration, 1);
-            // ease-out cubic
             const eased = 1 - Math.pow(1 - progress, 3);
             el.textContent = Math.round(target * eased);
             if (progress < 1) requestAnimationFrame(tick);
