@@ -126,7 +126,14 @@ def build_card_data(profile: dict, repos: list[dict], pr_issue_data: dict, calen
         reverse=True,
     )[:3]
 
+    public_repos = profile.get("public_repos", 0)
+    followers = profile.get("followers", 0)
+    total_stars = sum(r.get("stargazers_count", 0) for r in repos)
+    age = account_age_years(profile)
+    langs = " · ".join(top_languages) or "—"
+
     return {
+        "card_type": "github",
         "username": profile["login"],
         "name": profile.get("name") or profile["login"],
         "avatar_url": profile.get("avatar_url"),
@@ -134,8 +141,12 @@ def build_card_data(profile: dict, repos: list[dict], pr_issue_data: dict, calen
         "tier": tier,
         "attributes": attrs,
         "top_languages": top_languages,
-        "public_repos": profile.get("public_repos", 0),
-        "followers": profile.get("followers", 0),
-        "account_age_years": account_age_years(profile),
-        "total_stars": sum(r.get("stargazers_count", 0) for r in repos),
+        "public_repos": public_repos,
+        "followers": followers,
+        "account_age_years": age,
+        "total_stars": total_stars,
+        # Generalized fields for card_svg renderer
+        "badge_text": langs,
+        "info_line": f"{public_repos} repos · {followers} followers · {total_stars}★",
+        "subtitle": f"{age} yrs on GitHub",
     }

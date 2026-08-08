@@ -1,7 +1,12 @@
 """
-Renders card_data (from stats.build_card_data) into an SVG string.
-SVG is used instead of a canvas/PNG library so the card stays crisp at
-any resolution and is trivial to export client-side.
+Renders card_data into an SVG string. Generalized to support multiple card
+types (GitHub, Chess.com, etc.). The card_data dict must contain:
+  - card_type: "github" | "chess" (used for footer text)
+  - username, name, avatar_url
+  - overall, tier, attributes (dict of 5 key-value pairs)
+  - badge_text: short string for the top-right badge
+  - info_line: one-line summary string
+  - subtitle: bottom info text (e.g. "3.2 yrs on GitHub")
 """
 
 TIER_COLORS = {
@@ -10,6 +15,30 @@ TIER_COLORS = {
     "Skilled": ("#CD7F32", "#8B4513"),
     "Rising": ("#4A90D9", "#2C5F8A"),
     "Rookie": ("#6B7280", "#374151"),
+}
+
+CARD_TYPE_LABELS = {
+    "github": "GitHub Player Card",
+    "chess": "Chess.com Player Card",
+    "codeforces": "Codeforces Player Card",
+}
+
+# Attribute display labels per card type
+ATTR_LABELS = {
+    "github": {
+        "consistency": "CONSISTENCY",
+        "depth": "DEPTH",
+        "range": "RANGE",
+        "impact": "IMPACT",
+        "collaboration": "COLLAB",
+    },
+    "chess": {
+        "speed": "SPEED",
+        "strategy": "STRATEGY",
+        "tactical": "TACTICAL",
+        "consistency": "CONSISTENCY",
+        "experience": "EXPERIENCE",
+    },
 }
 
 
@@ -24,21 +53,21 @@ def stat_bar(x: int, y: int, label: str, value: int, width: int = 160) -> str:
 
 
 def render_card(card_data: dict) -> str:
+    card_type = card_data.get("card_type", "github")
     primary, secondary = TIER_COLORS.get(card_data["tier"], TIER_COLORS["Rookie"])
     attrs = card_data["attributes"]
 
+    # Get the correct labels for this card type
+    labels = ATTR_LABELS.get(card_type, ATTR_LABELS["github"])
+
     bars = ""
-    labels = {
-        "consistency": "CONSISTENCY",
-        "depth": "DEPTH",
-        "range": "RANGE",
-        "impact": "IMPACT",
-        "collaboration": "COLLAB",
-    }
     for i, (key, label) in enumerate(labels.items()):
         bars += stat_bar(x=40, y=250 + i * 30, label=label, value=attrs[key])
 
-    langs = " · ".join(card_data["top_languages"]) or "—"
+    badge_text = card_data.get("badge_text", "—")
+    info_line = card_data.get("info_line", "")
+    subtitle = card_data.get("subtitle", "")
+    footer_label = CARD_TYPE_LABELS.get(card_type, "Player Card")
 
     return f"""
 <svg viewBox="0 0 320 460" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
@@ -61,12 +90,12 @@ def render_card(card_data: dict) -> str:
   <text x="40" y="140" font-size="20" font-weight="700" fill="#111827">{card_data['name']}</text>
   <text x="40" y="160" font-size="13" fill="#6b7280">@{card_data['username']}</text>
 
-  <text x="40" y="190" font-size="11" fill="#4b5563">{card_data['public_repos']} repos · {card_data['followers']} followers · {card_data['total_stars']}★</text>
-  <text x="40" y="208" font-size="11" fill="#4b5563">{langs}</text>
-  <text x="40" y="226" font-size="11" fill="#9ca3af">{card_data['account_age_years']} yrs on GitHub</text>
+  <text x="40" y="190" font-size="11" fill="#4b5563">{info_line}</text>
+  <text x="40" y="208" font-size="11" fill="#4b5563">{badge_text}</text>
+  <text x="40" y="226" font-size="11" fill="#9ca3af">{subtitle}</text>
 
   {bars}
 
-  <text x="160" y="435" font-size="10" fill="#9ca3af" text-anchor="middle">generated card · not an official GitHub product</text>
+  <text x="160" y="435" font-size="10" fill="#9ca3af" text-anchor="middle">{footer_label} · not an official product</text>
 </svg>
 """
