@@ -20,7 +20,7 @@ TIER_COLORS = {
 CARD_TYPE_LABELS = {
     "github": "GitHub Player Card",
     "chess": "Chess.com Player Card",
-    "codeforces": "Codeforces Player Card",
+    "leetcode": "LeetCode Player Card",
 }
 
 # Attribute display labels per card type
@@ -38,6 +38,13 @@ ATTR_LABELS = {
         "tactical": "TACTICAL",
         "consistency": "CONSISTENCY",
         "experience": "EXPERIENCE",
+    },
+    "leetcode": {
+        "solving": "SOLVING",
+        "grit": "GRIT",
+        "speed": "SPEED",
+        "streak": "STREAK",
+        "impact": "IMPACT",
     },
 }
 

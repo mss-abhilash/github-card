@@ -123,17 +123,27 @@ so the frontend works both locally and when deployed via same-origin serving.
 server-side issue on Chess.com), so all stats come back as 0 for that user.
 Other users (magnuscarlsen, gothamchess) work fine.
 
-## Step 8 — Codeforces/LeetCode card type
+## Step 8 — LeetCode card type
+**Status:** DONE
+**What was done:** Built `leetcode_client.py` (async httpx, GraphQL POST to
+`https://leetcode.com/graphql`, two queries: `matchedUser` for profile + submit
+stats, `userContestRanking` for contest info), `leetcode_stats.py` (5 attributes:
+Solving, Grit, Speed, Streak, Impact — using log_scale, with contest global
+ranking weighted heavily in Impact), registered `leetcode` in generalized
+`card_svg.py` (CARD_TYPE_LABELS + ATTR_LABELS), added `/api/leetcode/{username}`
+and `/api/leetcode/{username}/svg` endpoints to `main.py` with separate cache,
+updated `frontend/index.html` replacing Codeforces "coming soon" with working
+LeetCode nav button, LeetCode icon, `STAT_CONFIG` (SLV/GRT/SPD/STK/IMP),
+and endpoint routing via maps instead of ternaries.
+**Verified by:** Live end-to-end test — `neal_wu` returns Elite 70 card with
+SLV 59, GRT 74, SPD 78, STK 89, IMP 56. `uwi` returns Legendary 93. All
+imports pass, FastAPI app loads with all 6 API routes registered. GitHub and
+Chess cards still work (no regressions in card_svg or main.py).
+**Note:** Some users (e.g. `jiangly`) return empty submission stats from
+LeetCode's API (similar to the `hikaru` situation on Chess.com). This is a
+server-side data visibility issue, not a bug in our code.
+
+## Step 9 — Finish Project
 **Status:** NEXT
-**Task:** Same pattern again — `codeforces_client.py` (public API, no
-auth: `codeforces.com/api/user.info?handles=...`), matching stats module,
-reuse `card_svg.py`.
-
-## Step 9 — PNG export
-**Status:** Not started — low priority, do after Steps 7-8.
-**Task:** Client-side SVG→PNG conversion via canvas, for platforms that
-don't render inline SVG well.
-
-## Step 10 — BGMI / Gemini vision card
-**Status:** Rejected — see "Decisions" section above. Do not start this
-unless the user explicitly reopens it.
+**Task:** Final testing, ensure all three card types (GitHub, Chess, LeetCode) work
+flawlessly with the new cinematic UI. Prepare final deployment instructions.

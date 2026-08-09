@@ -9,6 +9,8 @@ from github_client import GitHubClient, GitHubUserNotFound, GitHubRateLimited
 from stats import build_card_data
 from chess_client import ChessClient, ChessUserNotFound, ChessRateLimited
 from chess_stats import build_chess_card_data
+from leetcode_client import LeetCodeClient, LeetCodeUserNotFound, LeetCodeRateLimited
+from leetcode_stats import build_leetcode_card_data
 from card_svg import render_card
 
 app = FastAPI(title="Player Card API")
@@ -22,9 +24,11 @@ app.add_middleware(
 
 github_client = GitHubClient()
 chess_client = ChessClient()
+leetcode_client = LeetCodeClient()
 
 _github_cache: dict[str, tuple[float, dict]] = {}
 _chess_cache: dict[str, tuple[float, dict]] = {}
+_leetcode_cache: dict[str, tuple[float, dict]] = {}
 CACHE_TTL_SECONDS = 60 * 60
 
 
@@ -96,6 +100,39 @@ async def get_chess_svg(username: str):
     return Response(content=svg, media_type="image/svg+xml")
 
 
+# ============ LEETCODE ============
+
+async def get_leetcode_card_data(username: str) -> dict:
+    now = time.time()
+    cached = _leetcode_cache.get(username.lower())
+    if cached and now - cached[0] < CACHE_TTL_SECONDS:
+        return cached[1]
+
+    try:
+        user_data = await leetcode_client.get_user_profile(username)
+        contest_info = await leetcode_client.get_contest_info(username)
+    except LeetCodeUserNotFound:
+        raise HTTPException(status_code=404, detail=f"LeetCode user '{username}' not found")
+    except LeetCodeRateLimited as e:
+        raise HTTPException(status_code=429, detail=str(e))
+
+    data = build_leetcode_card_data(user_data, contest_info)
+    _leetcode_cache[username.lower()] = (now, data)
+    return data
+
+
+@app.get("/api/leetcode/{username}")
+async def get_leetcode_json(username: str):
+    return await get_leetcode_card_data(username)
+
+
+@app.get("/api/leetcode/{username}/svg")
+async def get_leetcode_svg(username: str):
+    data = await get_leetcode_card_data(username)
+    svg = render_card(data)
+    return Response(content=svg, media_type="image/svg+xml")
+
+
 # ============ HEALTH & LIFECYCLE ============
 
 @app.get("/health")
@@ -107,6 +144,7 @@ async def health():
 async def shutdown():
     await github_client.close()
     await chess_client.close()
+    await leetcode_client.close()
 
 # Serve frontend static files — must be AFTER API routes
 _frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
