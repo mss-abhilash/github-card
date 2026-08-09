@@ -5,7 +5,7 @@ Design principle: don't map raw numbers 1:1 to a rating. Use log-scaling
 so that early progress moves the needle a lot (motivating for new devs)
 and the scale doesn't blow past 99 for outliers (Linus Torvalds shouldn't
 break the UI). This is a heuristic curve, not a true population percentile —
-documented here so it's easy to defend in an interview, and easy to swap
+documented here for transparency, and easy to swap
 for real percentile data later if you collect a reference sample.
 """
 import math
