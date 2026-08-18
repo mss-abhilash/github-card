@@ -43,4 +43,3 @@ Open `frontend/index.html` in a browser. Update `API_BASE` in the
 - **Backend:** Render or Railway. Set `GITHUB_TOKEN` env var there.
 - **Frontend:** Vercel or Netlify.
 
-## See STEP_LOG.md for exactly what's been built and what's next.
