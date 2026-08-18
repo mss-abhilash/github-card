@@ -3,7 +3,7 @@
 Enter a GitHub username, get a shareable FIFA-style stat card generated
 from their real public activity.
 
-## How the ratings work (the part worth explaining in interviews)
+## How the ratings work 
 
 Raw numbers are **not** mapped 1:1 to ratings. Every stat goes through a
 log-scale curve (`stats.py::log_scale`) so that early progress moves the
